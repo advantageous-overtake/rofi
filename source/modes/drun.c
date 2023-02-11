@@ -222,6 +222,34 @@ struct RegexEvalArg {
   gboolean success;
 };
 
+static gchar *to_dash_case( gchar *input_str ) {
+  int symbolic_index = -1; 
+
+  for ( unsigned int index = 0; input_str[ index ] != '\0'; ++index ) {
+    gchar current_char = input_str[ index ];
+
+    if ( current_char == ' ' || current_char == '\t' ) {
+      input_str[ ++symbolic_index ] = '-';
+      continue;
+    }
+    
+    // delete GNU punct chararacter class members
+    if ( ( current_char >= 91 && current_char <= 96 ) || ( current_char >= 39 && current_char <= 47 ) ) {
+      if ( current_char != '-' && current_char != '_' ) // skip [-_]
+        continue;
+    } else if ( current_char >= 58 && current_char <= 64 )
+      continue; 
+    
+    input_str[ ++symbolic_index ] = current_char | 32;
+  }
+
+  gchar *new_buffer = strndup( input_str, ++symbolic_index );
+
+  g_free( input_str );
+
+  return new_buffer;
+}
+
 static gboolean drun_helper_eval_cb(const GMatchInfo *info, GString *res,
                                     gpointer data) {
   // TODO quoting is not right? Find description not very clear, need to check.
@@ -636,7 +664,8 @@ static void read_desktop_file(DRunModePrivateData *pd, const char *root,
     g_free(n);
     n = l;
   }
-  pd->entry_list[pd->cmd_list_length].name = n;
+
+  pd->entry_list[pd->cmd_list_length].name = to_dash_case( n );
   pd->entry_list[pd->cmd_list_length].action = DRUN_GROUP_NAME;
   gchar *gn = g_key_file_get_locale_string(kf, DRUN_GROUP_NAME, "GenericName",
                                            NULL, NULL);
